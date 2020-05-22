@@ -175,43 +175,5 @@ fragment float4 glitter_fragment(ColorVertex inVertex [[stage_in]],
         rgbCol = linearP3ToLinearSRGBMatrix * rgbCol;
     }
 
-    // ---
-
-    float brightness = pow(max(lightIncidence1, lightIncidence2), 30.0) * 2.0;
-
-    // This adds a little randomness to every cell so none look "blank"
-    float minBrightness = glitterCell1 * params.backgroundLight;
-    brightness = max(brightness, minBrightness);
-
-    // Saturation changes as brightness goes from 1.0 to 2.0
-    float saturationComponent = max(brightness - 1.0, 0.0);
-    // Value changes first, as brightness goes from 0.0 to 1.0
-    float valueComponent = brightness - saturationComponent;
-
-    float3 hsvColor = rgb2hsv(inVertex.color.rgb);
-
-    // Set saturation
-    hsvColor.y = 1.0 - saturationComponent * params.whiteness;
-
-    // Set value
-    hsvColor.z = params.darkness + valueComponent * (1.0 - params.darkness);
-
-    // Vary the hue a bit
-    hsvColor.x += glitterRandom1.x * params.hueVariance;
-
-    float3 rgbColor = hsv2rgb(hsvColor);
-
-    // Up to this point the colors have gone from 0 to 1, so they can be considered in P3 space
-    // (or, a slightly different color in sRGB). Now we translate them to the wider color, which
-    // is extended sRGB.
-    if (params.useWideColor) {
-        const float3x3 linearP3ToLinearSRGBMatrix =
-        float3x3(float3(1.2249,  -0.2247,  0.0),
-                 float3(-0.0420,   1.0419,  0.0),
-                 float3(-0.0197,  -0.0786,  1.0979));
-        rgbColor = linearP3ToLinearSRGBMatrix * rgbColor;
-    }
-
-//    return float4(rgbColor, 1.0);
     return  float4(rgbCol, 1.0);
 }
