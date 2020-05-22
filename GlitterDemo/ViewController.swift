@@ -7,14 +7,38 @@
 //
 
 import UIKit
+import Glitter
 
 class ViewController: UIViewController {
+    private var glitterView: GlitterView?
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view.
+        setupGlitterView()
     }
 
+    private func setupGlitterView() {
+        guard let glitterView = GlitterView(config: .default) else {
+            assertionFailure("Unable to set up a GlitterView")
+            return
+        }
 
+        view.addSubview(glitterView)
+        glitterView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            glitterView.topAnchor.constraint(equalTo: view.layoutMarginsGuide.topAnchor),
+            glitterView.bottomAnchor.constraint(equalTo: view.layoutMarginsGuide.bottomAnchor),
+            glitterView.leadingAnchor.constraint(equalTo: view.layoutMarginsGuide.leadingAnchor),
+            glitterView.trailingAnchor.constraint(equalTo: view.layoutMarginsGuide.trailingAnchor),
+        ])
+        self.glitterView = glitterView
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+
+        glitterView?.startMotionUpdates()
+        glitterView?.startAutoShimmer()
+    }
 }
 

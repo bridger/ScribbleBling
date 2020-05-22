@@ -13,7 +13,41 @@
 		59EA0D84246E480F008FD867 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 59EA0D82246E480F008FD867 /* Main.storyboard */; };
 		59EA0D86246E4812008FD867 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 59EA0D85246E4812008FD867 /* Assets.xcassets */; };
 		59EA0D89246E4812008FD867 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 59EA0D87246E4812008FD867 /* LaunchScreen.storyboard */; };
+		59EA0D99246E4826008FD867 /* Glitter.h in Headers */ = {isa = PBXBuildFile; fileRef = 59EA0D97246E4826008FD867 /* Glitter.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		59EA0D9C246E4826008FD867 /* Glitter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 59EA0D95246E4826008FD867 /* Glitter.framework */; };
+		59EA0D9D246E4826008FD867 /* Glitter.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 59EA0D95246E4826008FD867 /* Glitter.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		59EA0DA7246EFF63008FD867 /* GlitterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0DA6246EFF63008FD867 /* GlitterView.swift */; };
+		59EA0DA9246EFFEF008FD867 /* Pipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0DA8246EFFEF008FD867 /* Pipeline.swift */; };
+		59EA0DAB246F20A5008FD867 /* Animation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0DAA246F20A5008FD867 /* Animation.swift */; };
+		59EA0DAE246F26A8008FD867 /* Glitter.metal in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0DAC246F269E008FD867 /* Glitter.metal */; };
+		59EA0DB0246F328F008FD867 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0DAF246F328F008FD867 /* Config.swift */; };
+		59EA0DB2246F32D3008FD867 /* MotionEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0DB1246F32D3008FD867 /* MotionEffect.swift */; };
+		59EA0DB4246F33BC008FD867 /* VertexInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0DB3246F33BC008FD867 /* VertexInfo.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		59EA0D9A246E4826008FD867 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 59EA0D71246E480F008FD867 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 59EA0D94246E4826008FD867;
+			remoteInfo = Glitter;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		59EA0DA1246E4826008FD867 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				59EA0D9D246E4826008FD867 /* Glitter.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		59EA0D79246E480F008FD867 /* GlitterDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GlitterDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -24,10 +58,28 @@
 		59EA0D85246E4812008FD867 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		59EA0D88246E4812008FD867 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		59EA0D8A246E4812008FD867 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		59EA0D95246E4826008FD867 /* Glitter.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Glitter.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		59EA0D97246E4826008FD867 /* Glitter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Glitter.h; sourceTree = "<group>"; };
+		59EA0D98246E4826008FD867 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		59EA0DA6246EFF63008FD867 /* GlitterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlitterView.swift; sourceTree = "<group>"; };
+		59EA0DA8246EFFEF008FD867 /* Pipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pipeline.swift; sourceTree = "<group>"; };
+		59EA0DAA246F20A5008FD867 /* Animation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Animation.swift; sourceTree = "<group>"; };
+		59EA0DAC246F269E008FD867 /* Glitter.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Glitter.metal; sourceTree = "<group>"; };
+		59EA0DAF246F328F008FD867 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		59EA0DB1246F32D3008FD867 /* MotionEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionEffect.swift; sourceTree = "<group>"; };
+		59EA0DB3246F33BC008FD867 /* VertexInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VertexInfo.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		59EA0D76246E480F008FD867 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				59EA0D9C246E4826008FD867 /* Glitter.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		59EA0D92246E4826008FD867 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -41,6 +93,7 @@
 			isa = PBXGroup;
 			children = (
 				59EA0D7B246E480F008FD867 /* GlitterDemo */,
+				59EA0D96246E4826008FD867 /* Glitter */,
 				59EA0D7A246E480F008FD867 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -49,6 +102,7 @@
 			isa = PBXGroup;
 			children = (
 				59EA0D79246E480F008FD867 /* GlitterDemo.app */,
+				59EA0D95246E4826008FD867 /* Glitter.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -67,7 +121,34 @@
 			path = GlitterDemo;
 			sourceTree = "<group>";
 		};
+		59EA0D96246E4826008FD867 /* Glitter */ = {
+			isa = PBXGroup;
+			children = (
+				59EA0D97246E4826008FD867 /* Glitter.h */,
+				59EA0D98246E4826008FD867 /* Info.plist */,
+				59EA0DA6246EFF63008FD867 /* GlitterView.swift */,
+				59EA0DB3246F33BC008FD867 /* VertexInfo.swift */,
+				59EA0DB1246F32D3008FD867 /* MotionEffect.swift */,
+				59EA0DAF246F328F008FD867 /* Config.swift */,
+				59EA0DAA246F20A5008FD867 /* Animation.swift */,
+				59EA0DA8246EFFEF008FD867 /* Pipeline.swift */,
+				59EA0DAC246F269E008FD867 /* Glitter.metal */,
+			);
+			path = Glitter;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		59EA0D90246E4826008FD867 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				59EA0D99246E4826008FD867 /* Glitter.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
 		59EA0D78246E480F008FD867 /* GlitterDemo */ = {
@@ -77,15 +158,35 @@
 				59EA0D75246E480F008FD867 /* Sources */,
 				59EA0D76246E480F008FD867 /* Frameworks */,
 				59EA0D77246E480F008FD867 /* Resources */,
+				59EA0DA1246E4826008FD867 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				59EA0D9B246E4826008FD867 /* PBXTargetDependency */,
 			);
 			name = GlitterDemo;
 			productName = GlitterDemo;
 			productReference = 59EA0D79246E480F008FD867 /* GlitterDemo.app */;
 			productType = "com.apple.product-type.application";
+		};
+		59EA0D94246E4826008FD867 /* Glitter */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 59EA0D9E246E4826008FD867 /* Build configuration list for PBXNativeTarget "Glitter" */;
+			buildPhases = (
+				59EA0D90246E4826008FD867 /* Headers */,
+				59EA0D91246E4826008FD867 /* Sources */,
+				59EA0D92246E4826008FD867 /* Frameworks */,
+				59EA0D93246E4826008FD867 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Glitter;
+			productName = Glitter;
+			productReference = 59EA0D95246E4826008FD867 /* Glitter.framework */;
+			productType = "com.apple.product-type.framework";
 		};
 /* End PBXNativeTarget section */
 
@@ -99,6 +200,10 @@
 				TargetAttributes = {
 					59EA0D78246E480F008FD867 = {
 						CreatedOnToolsVersion = 11.5;
+					};
+					59EA0D94246E4826008FD867 = {
+						CreatedOnToolsVersion = 11.5;
+						LastSwiftMigration = 1150;
 					};
 				};
 			};
@@ -116,6 +221,7 @@
 			projectRoot = "";
 			targets = (
 				59EA0D78246E480F008FD867 /* GlitterDemo */,
+				59EA0D94246E4826008FD867 /* Glitter */,
 			);
 		};
 /* End PBXProject section */
@@ -128,6 +234,13 @@
 				59EA0D89246E4812008FD867 /* LaunchScreen.storyboard in Resources */,
 				59EA0D86246E4812008FD867 /* Assets.xcassets in Resources */,
 				59EA0D84246E480F008FD867 /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		59EA0D93246E4826008FD867 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -144,7 +257,29 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		59EA0D91246E4826008FD867 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				59EA0DA7246EFF63008FD867 /* GlitterView.swift in Sources */,
+				59EA0DAE246F26A8008FD867 /* Glitter.metal in Sources */,
+				59EA0DB0246F328F008FD867 /* Config.swift in Sources */,
+				59EA0DAB246F20A5008FD867 /* Animation.swift in Sources */,
+				59EA0DB2246F32D3008FD867 /* MotionEffect.swift in Sources */,
+				59EA0DA9246EFFEF008FD867 /* Pipeline.swift in Sources */,
+				59EA0DB4246F33BC008FD867 /* VertexInfo.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		59EA0D9B246E4826008FD867 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 59EA0D94246E4826008FD867 /* Glitter */;
+			targetProxy = 59EA0D9A246E4826008FD867 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		59EA0D82246E480F008FD867 /* Main.storyboard */ = {
@@ -283,10 +418,12 @@
 		59EA0D8E246E4812008FD867 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 2W72Q4758S;
 				INFOPLIST_FILE = GlitterDemo/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.4;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -301,10 +438,12 @@
 		59EA0D8F246E4812008FD867 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 2W72Q4758S;
 				INFOPLIST_FILE = GlitterDemo/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.4;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -313,6 +452,65 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		59EA0D9F246E4826008FD867 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = 2W72Q4758S;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Glitter/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 13.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.sakunlabs.Glitter;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		59EA0DA0246E4826008FD867 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = 2W72Q4758S;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Glitter/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 13.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.sakunlabs.Glitter;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
 			};
 			name = Release;
 		};
@@ -333,6 +531,15 @@
 			buildConfigurations = (
 				59EA0D8E246E4812008FD867 /* Debug */,
 				59EA0D8F246E4812008FD867 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		59EA0D9E246E4826008FD867 /* Build configuration list for PBXNativeTarget "Glitter" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				59EA0D9F246E4826008FD867 /* Debug */,
+				59EA0DA0246E4826008FD867 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
