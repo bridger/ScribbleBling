@@ -148,23 +148,17 @@ fragment float4 glitter_fragment(ColorVertex inVertex [[stage_in]],
                                       UPRIGHT));
     float lightIncidence2 = abs(dot(normal2, float3(params.tilt))); // Because of the abs this will reflect in the negative direction too, so each glitter lights up more
 
+    float brightness = pow(max(lightIncidence1, lightIncidence2), 30) * 2.0;
 
-    // ----
+    float hues[] = {
+        0.83, 0.74, 0.59, 0.66, 0.42, 0.14, 0.93, 0.36, 0.03, 0.19
+    };
 
-    float3 red = rgb2hsv( {0.87,0.2,0.2} );
-    float3 blue = rgb2hsv( {0.07,0.01,0.97} );
-
-    float lightness = pow(max(lightIncidence1, lightIncidence2), 30);
-    float saturation = min(0.3, step(0.5, lightness));
-    float3 hsvCol = blue;
-    hsvCol.x += glitterRandom1.x * params.hueVariance;
-    hsvCol.y = 1.0 - saturation * params.whiteness;
-
-    if (saturation == 0) {
-        hsvCol = rgb2hsv({0.01, 0.01, 0.01});
-    } else {
-        hsvCol.z = saturation;
-    }
+    float value = brightness / 2.0;
+    float saturation = max((brightness - 1.0), 0.0);
+    int hueIndex = int(random(glitterRandom1) * 10.0);
+    float hue = hues[hueIndex];
+    float3 hsvCol = {hue, saturation, value};
 
     float3 rgbCol = hsv2rgb(hsvCol);
     if (params.useWideColor) {
