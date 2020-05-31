@@ -17,6 +17,8 @@ import MetalPerformanceShaders
 @available(iOS 10.0, *)
 public class GlitterView: MTKView {
     private let pipelineState: MTLRenderPipelineState
+    private let offlinePipelineState: MTLRenderPipelineState
+    private var offlineRenderDescriptor: MTLRenderPassDescriptor?
     private let fullScreenColorVertices: MTLBuffer
     private let commandQueue: MTLCommandQueue
 
@@ -34,10 +36,12 @@ public class GlitterView: MTKView {
         guard
             let device = MTLCreateSystemDefaultDevice(),
             let pipelineState = Pipeline.build(device: device, pixelFormat: Self.pixelFormat),
+            let offlinePipelineState = Pipeline.build(device: device, pixelFormat: Self.pixelFormat),
             let commandQueue = device.makeCommandQueue()
             else { return nil }
 
         self.pipelineState = pipelineState
+        self.offlinePipelineState = offlinePipelineState
         self.commandQueue = commandQueue
         self.config = config
 
@@ -135,78 +139,57 @@ public class GlitterView: MTKView {
         // We use this to find out when the frame changed. For some reason, overriding bounds doesn't get the didSet notification
         super.layoutSubviews()
         displayOnNextFrame = true
+        offlineRenderDescriptor = nil
     }
 
     public override func draw(_ rect: CGRect) {
         autoreleasepool {
             guard
-                let renderPassDescriptor = self.currentRenderPassDescriptor,
+                let renderPassDescriptor = currentRenderPassDescriptor,
                 let commandBuffer = commandQueue.makeCommandBuffer(),
-                let drawable = self.currentDrawable
-                else {
-                    return
-            }
+                let drawable = currentDrawable
+            else { return }
+
             renderPassDescriptor.colorAttachments[0].loadAction = .clear
             renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0.3, green: 0.9, blue: 0.6, alpha: 1)
 
-            guard
-                let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)
-                else {
-                    return
+            guard let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else {
+                return
             }
 
             renderEncoder.setRenderPipelineState(self.pipelineState)
 
-            var xTilt: Double
-            var yTilt: Double
-            let zTilt: Double = 0.15 // Lower this to make the tilt have more of an effect
-            if let tilt = motionTilt {
-                xTilt = Double(tilt.horizontal)
-                yTilt = Double(tilt.vertical)
+            drawGlitter(encoder: renderEncoder)
 
-                if let gravity = self.gravity {
-                    let gravityEffect: Double = 0.3
-                    // This just incorporates gravity into a small effect so that we get some shimmer even when UIMotionEffect is maxed out
-                    xTilt += sin(gravity.x + gravity.z / 2.0) * gravityEffect
-                    yTilt += sin(gravity.y + gravity.z / 2.0) * gravityEffect
-                }
+            if
+                let blurRenderPassDescriptor = offlineBlurRenderPassDescriptor,
+                let secondCommandBuffer = commandQueue.makeCommandBuffer(),
+                let blurRenderEncoder = secondCommandBuffer.makeRenderCommandEncoder(descriptor: blurRenderPassDescriptor),
+                var blurTexture = blurRenderPassDescriptor.colorAttachments[0].texture,
+                var blurCommandBuffer = commandQueue.makeCommandBuffer()
+            {
+                blurRenderEncoder.setRenderPipelineState(offlinePipelineState)
+                drawGlitter(encoder: blurRenderEncoder)
+                blurRenderEncoder.endEncoding()
+                secondCommandBuffer.commit()
+                secondCommandBuffer.waitUntilCompleted()
+
+
+                let blurRadius: Float = 5.3
+                let kernel = MPSImageGaussianBlur(device: self.device!, sigma: blurRadius)
+                kernel.encode(commandBuffer: blurCommandBuffer, inPlaceTexture: &blurTexture, fallbackCopyAllocator: nil)
+                blurCommandBuffer.commit()
+                blurCommandBuffer.waitUntilCompleted()
+
+                // Draw the blurred texture to the screen
+                renderEncoder.setRenderPipelineState(pipelineState)
+
+                renderEncoder.setFragmentTexture(blurTexture, index: 0)
+                renderEncoder.setVertexBuffer(fullScreenColorVertices, offset: 0, index: 0)
+                renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
             } else {
-                xTilt = (sin(startTime.timeIntervalSinceNow * 0.9) + 1.0) / 2.0
-                yTilt = (cos(startTime.timeIntervalSinceNow * 0.8) + 1.0) / 2.0
+                assertionFailure("Could not set up blur rendering buffer")
             }
-
-            if let shimmerAnimation = shimmerAnimation {
-                shimmerAnimation.currentTime = CACurrentMediaTime()
-                let amount = ImpulsePulse().apply(shimmerAnimation.percent) * config.shimmerStrength
-                xTilt += Double(sin(shimmerAnimation.currentValue) * amount)
-                yTilt += Double(cos(shimmerAnimation.currentValue) * amount * 0.5)
-            }
-
-            // Normalize the tilt
-            let tiltLength = sqrt(
-                xTilt * xTilt +
-                    yTilt * yTilt +
-                    zTilt * zTilt)
-
-            var fragmentUniform = GlitterFragmentUniforms(
-                displayWidth: Float(self.bounds.width * self.contentScaleFactor),
-                displayHeight: Float(self.bounds.height * self.contentScaleFactor),
-                displayScale: Float(self.contentScaleFactor),
-                tiltX: Float(xTilt / tiltLength),
-                tiltY: Float(yTilt / tiltLength),
-                tiltZ: Float(zTilt / tiltLength),
-                cellSize: Float(10.0 - config.glitterSize) / 10.0,
-                whiteness: Float(config.glitterWhiteness),
-                darkness: Float(config.glitterDarkness),
-                backgroundLight: Float(config.glitterBackgroundVariance),
-                hueVariance: Float(config.glitterHueVariance) / 10,
-                useWideColor: Self.pixelFormat == .bgra8Unorm ? 0 : 1
-            )
-
-            renderEncoder.setFragmentBytes(&fragmentUniform, length: MemoryLayout.size(ofValue: fragmentUniform), index: 1)
-
-            renderEncoder.setVertexBuffer(fullScreenColorVertices, offset: 0, index: 0)
-            renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
 
             renderEncoder.endEncoding()
 
@@ -215,7 +198,88 @@ public class GlitterView: MTKView {
         }
     }
 
+    private func drawGlitter(encoder: MTLRenderCommandEncoder) {
+        var xTilt: Double
+        var yTilt: Double
+        let zTilt: Double = 0.15 // Lower this to make the tilt have more of an effect
+        if let tilt = motionTilt {
+            xTilt = Double(tilt.horizontal)
+            yTilt = Double(tilt.vertical)
+
+            if let gravity = self.gravity {
+                let gravityEffect: Double = 0.3
+                // This just incorporates gravity into a small effect so that we get some shimmer even when UIMotionEffect is maxed out
+                xTilt += sin(gravity.x + gravity.z / 2.0) * gravityEffect
+                yTilt += sin(gravity.y + gravity.z / 2.0) * gravityEffect
+            }
+        } else {
+            xTilt = (sin(startTime.timeIntervalSinceNow * 0.9) + 1.0) / 2.0
+            yTilt = (cos(startTime.timeIntervalSinceNow * 0.8) + 1.0) / 2.0
+        }
+
+        if let shimmerAnimation = shimmerAnimation {
+            shimmerAnimation.currentTime = CACurrentMediaTime()
+            let amount = ImpulsePulse().apply(shimmerAnimation.percent) * config.shimmerStrength
+            xTilt += Double(sin(shimmerAnimation.currentValue) * amount)
+            yTilt += Double(cos(shimmerAnimation.currentValue) * amount * 0.5)
+        }
+
+        // Normalize the tilt
+        let tiltLength = sqrt(
+            xTilt * xTilt +
+                yTilt * yTilt +
+                zTilt * zTilt)
+
+        var fragmentUniform = GlitterFragmentUniforms(
+            displayWidth: Float(self.bounds.width * self.contentScaleFactor),
+            displayHeight: Float(self.bounds.height * self.contentScaleFactor),
+            displayScale: Float(self.contentScaleFactor),
+            tiltX: Float(xTilt / tiltLength),
+            tiltY: Float(yTilt / tiltLength),
+            tiltZ: Float(zTilt / tiltLength),
+            cellSize: Float(10.0 - config.glitterSize) / 10.0,
+            whiteness: Float(config.glitterWhiteness),
+            darkness: Float(config.glitterDarkness),
+            backgroundLight: Float(config.glitterBackgroundVariance),
+            hueVariance: Float(config.glitterHueVariance) / 10,
+            useWideColor: Self.pixelFormat == .bgra8Unorm ? 0 : 1
+        )
+
+        encoder.setFragmentBytes(&fragmentUniform, length: MemoryLayout.size(ofValue: fragmentUniform), index: 1)
+
+        encoder.setVertexBuffer(fullScreenColorVertices, offset: 0, index: 0)
+        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+    }
+
     required init(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+}
+
+extension GlitterView {
+    private var offlineBlurRenderPassDescriptor: MTLRenderPassDescriptor? {
+        if let cached = offlineRenderDescriptor {
+            return cached
+        }
+        guard
+            let screenPassDescriptor = currentRenderPassDescriptor,
+            let screenTexture = screenPassDescriptor.colorAttachments[0].texture else {
+            return nil
+        }
+        let textureDescriptor = MTLTextureDescriptor()
+        textureDescriptor.width = screenTexture.width
+        textureDescriptor.height = screenTexture.height
+        textureDescriptor.pixelFormat = screenTexture.pixelFormat
+        // TODO: what should the usage be?
+        textureDescriptor.usage = [.renderTarget, .shaderRead, .shaderWrite]
+        let texture = device?.makeTexture(descriptor: textureDescriptor)
+
+        let renderPassDescriptor = MTLRenderPassDescriptor()
+        renderPassDescriptor.colorAttachments[0].texture = texture
+        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 1)
+        renderPassDescriptor.colorAttachments[0].loadAction = .clear
+        self.offlineRenderDescriptor = renderPassDescriptor
+
+        return renderPassDescriptor
     }
 }
