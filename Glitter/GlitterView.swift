@@ -13,45 +13,55 @@ import CoreMotion
 import MetalKit
 import MetalPerformanceShaders
 
-
 @available(iOS 10.0, *)
 public class GlitterView: MTKView {
-    private let pipelineState: MTLRenderPipelineState
-    private let offlinePipelineState: MTLRenderPipelineState
+    private let compositePipelineState: MTLRenderPipelineState
+    private let glitterPipelineState: MTLRenderPipelineState
     private var offlineRenderDescriptor: MTLRenderPassDescriptor?
     private let fullScreenColorVertices: MTLBuffer
+    private let fullScreenTexturedVertices: MTLBuffer
     private let commandQueue: MTLCommandQueue
 
     public var config: GlitterConfig
+
+    var fullscreenTextVertices: [TextureFloatPoint] = [
+        TextureFloatPoint(x: -1, y: -1, texX: 0, texY: 1),
+        TextureFloatPoint(x: 1, y: -1, texX: 1, texY: 1),
+        TextureFloatPoint(x: -1, y: 1, texX: 0, texY: 0),
+        TextureFloatPoint(x: 1, y: 1, texX: 1, texY: 0)
+    ]
 
     static var pixelFormat: MTLPixelFormat{
         #if targetEnvironment(simulator)
         return .bgra8Unorm
         #else
-        return (UIScreen.main.traitCollection.displayGamut == .P3) ? .bgr10_xr : .bgra8Unorm
+        return (UIScreen.main.traitCollection.displayGamut == .P3) ? .bgra10_xr : .bgra8Unorm
         #endif
     }
 
     public required init?(config: GlitterConfig) {
         guard
             let device = MTLCreateSystemDefaultDevice(),
-            let pipelineState = Pipeline.build(device: device, pixelFormat: Self.pixelFormat),
-            let offlinePipelineState = Pipeline.build(device: device, pixelFormat: Self.pixelFormat),
+            let pipelineState = Pipeline.buildComposite(device: device, pixelFormat: Self.pixelFormat),
+            let glitterPipelineState = Pipeline.build(device: device, pixelFormat: Self.pixelFormat),
             let commandQueue = device.makeCommandQueue()
             else { return nil }
 
-        self.pipelineState = pipelineState
-        self.offlinePipelineState = offlinePipelineState
+        self.compositePipelineState = pipelineState
+        self.glitterPipelineState = glitterPipelineState
         self.commandQueue = commandQueue
         self.config = config
 
         let fullScreenColorVertices = config.fullScreenColorVertices.vertices
         let dataSize = fullScreenColorVertices.count * MemoryLayout.size(ofValue: fullScreenColorVertices[0])
 
-        guard let buffer = device.makeBuffer(bytes: fullScreenColorVertices, length: dataSize, options: []) else {
+        guard let verticesBuffer = device.makeBuffer(bytes: fullScreenColorVertices, length: dataSize, options: []) else {
             return nil
         }
-        self.fullScreenColorVertices = buffer
+        self.fullScreenColorVertices = verticesBuffer
+
+        let textureDataSize = fullscreenTextVertices.count * MemoryLayout.size(ofValue: fullscreenTextVertices[0])
+        self.fullScreenTexturedVertices = device.makeBuffer(bytes: fullscreenTextVertices, length: textureDataSize, options: [])!
 
         super.init(frame: CGRect.zero, device: device)
 
@@ -70,6 +80,7 @@ public class GlitterView: MTKView {
         self.layer.isOpaque = true
         self.colorPixelFormat = Self.pixelFormat
         self.sampleCount = 1
+        self.framebufferOnly = false
     }
 
     private var displayOnNextFrame = true
@@ -145,53 +156,56 @@ public class GlitterView: MTKView {
     public override func draw(_ rect: CGRect) {
         autoreleasepool {
             guard
-                let renderPassDescriptor = currentRenderPassDescriptor,
+                let screenRenderPassDescriptor = currentRenderPassDescriptor,
                 let commandBuffer = commandQueue.makeCommandBuffer(),
+                let offscreenCommandBuffer = commandQueue.makeCommandBuffer(),
+                let blurCommandBuffer = commandQueue.makeCommandBuffer(),
                 let drawable = currentDrawable
             else { return }
 
-            renderPassDescriptor.colorAttachments[0].loadAction = .clear
-            renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0.3, green: 0.9, blue: 0.6, alpha: 1)
-
-            guard let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else {
+            // offline descriptor
+            guard let offlineRenderDescriptor = offlineBlurRenderPassDescriptor else {
+                return
+            }
+            guard let offlineRenderEncoder = offscreenCommandBuffer.makeRenderCommandEncoder(descriptor: offlineRenderDescriptor) else {
                 return
             }
 
-            renderEncoder.setRenderPipelineState(self.pipelineState)
+            // we first want to draw the glitter offline
+            // TODO: here, set a flag (with the uniforms) to only draw cells that are bright. Otherwise, glitter_fragment should return alpha 0
+            offlineRenderEncoder.setRenderPipelineState(self.glitterPipelineState)
+            drawGlitter(encoder: offlineRenderEncoder)
 
-            drawGlitter(encoder: renderEncoder)
+            offlineRenderEncoder.endEncoding()
+            offscreenCommandBuffer.commit()
 
-            if
-                let blurRenderPassDescriptor = offlineBlurRenderPassDescriptor,
-                let secondCommandBuffer = commandQueue.makeCommandBuffer(),
-                let blurRenderEncoder = secondCommandBuffer.makeRenderCommandEncoder(descriptor: blurRenderPassDescriptor),
-                var blurTexture = blurRenderPassDescriptor.colorAttachments[0].texture,
-                var blurCommandBuffer = commandQueue.makeCommandBuffer()
-            {
-                blurRenderEncoder.setRenderPipelineState(offlinePipelineState)
-                drawGlitter(encoder: blurRenderEncoder)
-                blurRenderEncoder.endEncoding()
-                secondCommandBuffer.commit()
-                secondCommandBuffer.waitUntilCompleted()
+            // now blur in the same buffer
+            let blurRadius: Float = 1.3
+            let kernel = MPSImageGaussianBlur(device: self.device!, sigma: blurRadius)
+            var texture = offlineRenderDescriptor.colorAttachments[0]!.texture!
+            kernel.encode(commandBuffer: blurCommandBuffer, inPlaceTexture: &texture, fallbackCopyAllocator: nil)
+            blurCommandBuffer.commit()
 
-
-                let blurRadius: Float = 5.3
-                let kernel = MPSImageGaussianBlur(device: self.device!, sigma: blurRadius)
-                kernel.encode(commandBuffer: blurCommandBuffer, inPlaceTexture: &blurTexture, fallbackCopyAllocator: nil)
-                blurCommandBuffer.commit()
-                blurCommandBuffer.waitUntilCompleted()
-
-                // Draw the blurred texture to the screen
-                renderEncoder.setRenderPipelineState(pipelineState)
-
-                renderEncoder.setFragmentTexture(blurTexture, index: 0)
-                renderEncoder.setVertexBuffer(fullScreenColorVertices, offset: 0, index: 0)
-                renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
-            } else {
-                assertionFailure("Could not set up blur rendering buffer")
+            guard let screenRenderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: screenRenderPassDescriptor) else {
+                return
             }
 
-            renderEncoder.endEncoding()
+            screenRenderEncoder.setRenderPipelineState(compositePipelineState)
+            var fragmentUniform = TextureFragmentUniform(
+                red: 0,
+                green: 0,
+                blue: 0,
+                alpha: 0.9)
+            screenRenderEncoder.setFragmentBytes(&fragmentUniform,
+                                           length: MemoryLayout.size(ofValue: fragmentUniform),
+                                           index: 0)
+
+            screenRenderEncoder.setFragmentTexture(texture, index: 0)
+            screenRenderEncoder.setVertexBuffer(fullScreenTexturedVertices, offset: 0, index: 0)
+            screenRenderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+
+
+            screenRenderEncoder.endEncoding()
 
             commandBuffer.present(drawable)
             commandBuffer.commit()

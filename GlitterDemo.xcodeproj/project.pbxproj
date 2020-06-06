@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		590E31582485C98D005E3A98 /* Passthrough.metal in Sources */ = {isa = PBXBuildFile; fileRef = 590E31572485C98D005E3A98 /* Passthrough.metal */; };
 		59EA0D7D246E480F008FD867 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0D7C246E480F008FD867 /* AppDelegate.swift */; };
 		59EA0D7F246E480F008FD867 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0D7E246E480F008FD867 /* SceneDelegate.swift */; };
 		59EA0D81246E480F008FD867 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0D80246E480F008FD867 /* ViewController.swift */; };
@@ -50,6 +51,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		590E31572485C98D005E3A98 /* Passthrough.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Passthrough.metal; sourceTree = "<group>"; };
 		59EA0D79246E480F008FD867 /* GlitterDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GlitterDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		59EA0D7C246E480F008FD867 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		59EA0D7E246E480F008FD867 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -132,6 +134,7 @@
 				59EA0DAF246F328F008FD867 /* Config.swift */,
 				59EA0DAA246F20A5008FD867 /* Animation.swift */,
 				59EA0DA8246EFFEF008FD867 /* Pipeline.swift */,
+				590E31572485C98D005E3A98 /* Passthrough.metal */,
 				59EA0DAC246F269E008FD867 /* Glitter.metal */,
 			);
 			path = Glitter;
@@ -263,6 +266,7 @@
 			files = (
 				59EA0DA7246EFF63008FD867 /* GlitterView.swift in Sources */,
 				59EA0DAE246F26A8008FD867 /* Glitter.metal in Sources */,
+				590E31582485C98D005E3A98 /* Passthrough.metal in Sources */,
 				59EA0DB0246F328F008FD867 /* Config.swift in Sources */,
 				59EA0DAB246F20A5008FD867 /* Animation.swift in Sources */,
 				59EA0DB2246F32D3008FD867 /* MotionEffect.swift in Sources */,

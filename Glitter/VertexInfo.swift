@@ -68,3 +68,16 @@ struct GlitterFragmentUniforms {
     let useWideColor: Int32
 }
 
+struct TextureFloatPoint {
+    public let x: Float
+    public let y: Float
+    public let texX: Float
+    public let texY: Float
+}
+
+struct TextureFragmentUniform {
+    let red: Float
+    let green: Float
+    let blue: Float
+    let alpha: Float
+}
