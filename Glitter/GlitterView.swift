@@ -179,11 +179,10 @@ public class GlitterView: MTKView {
             offlineRenderEncoder.endEncoding()
             offscreenCommandBuffer.commit()
 
-            // now blur in the same buffer
-            let blurRadius: Float = 1.3
-            let kernel = MPSImageGaussianBlur(device: self.device!, sigma: blurRadius)
+            let width: Int = 5
+            let tentKernel = MPSImageTent(device: self.device!, kernelWidth: width, kernelHeight: width)
             var texture = offlineRenderDescriptor.colorAttachments[0]!.texture!
-            kernel.encode(commandBuffer: blurCommandBuffer, inPlaceTexture: &texture, fallbackCopyAllocator: nil)
+            tentKernel.encode(commandBuffer: blurCommandBuffer, inPlaceTexture: &texture, fallbackCopyAllocator: nil)
             blurCommandBuffer.commit()
 
             guard let screenRenderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: screenRenderPassDescriptor) else {
