@@ -157,19 +157,17 @@ public class GlitterView: MTKView {
         autoreleasepool {
             guard
                 let screenRenderPassDescriptor = currentRenderPassDescriptor,
-                let commandBuffer = commandQueue.makeCommandBuffer(),
+                let screenCommandBuffer = commandQueue.makeCommandBuffer(),
                 let offscreenCommandBuffer = commandQueue.makeCommandBuffer(),
                 let blurCommandBuffer = commandQueue.makeCommandBuffer(),
                 let drawable = currentDrawable
             else { return }
 
             // offline descriptor
-            guard let offlineRenderDescriptor = offlineBlurRenderPassDescriptor else {
-                return
-            }
-            guard let offlineRenderEncoder = offscreenCommandBuffer.makeRenderCommandEncoder(descriptor: offlineRenderDescriptor) else {
-                return
-            }
+            guard
+                let offlineRenderDescriptor = offlineBlurRenderPassDescriptor,
+                let offlineRenderEncoder = offscreenCommandBuffer.makeRenderCommandEncoder(descriptor: offlineRenderDescriptor)
+            else { return }
 
             // we first want to draw the glitter offline
             // TODO: here, set a flag (with the uniforms) to only draw cells that are bright. Otherwise, glitter_fragment should return alpha 0
@@ -185,7 +183,7 @@ public class GlitterView: MTKView {
             tentKernel.encode(commandBuffer: blurCommandBuffer, inPlaceTexture: &texture, fallbackCopyAllocator: nil)
             blurCommandBuffer.commit()
 
-            guard let screenRenderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: screenRenderPassDescriptor) else {
+            guard let screenRenderEncoder = screenCommandBuffer.makeRenderCommandEncoder(descriptor: screenRenderPassDescriptor) else {
                 return
             }
 
@@ -200,14 +198,15 @@ public class GlitterView: MTKView {
                                            index: 0)
 
             screenRenderEncoder.setFragmentTexture(texture, index: 0)
+            
             screenRenderEncoder.setVertexBuffer(fullScreenTexturedVertices, offset: 0, index: 0)
             screenRenderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
 
 
             screenRenderEncoder.endEncoding()
 
-            commandBuffer.present(drawable)
-            commandBuffer.commit()
+            screenCommandBuffer.present(drawable)
+            screenCommandBuffer.commit()
         }
     }
 
