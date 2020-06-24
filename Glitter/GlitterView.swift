@@ -17,7 +17,9 @@ import MetalPerformanceShaders
 public class GlitterView: MTKView {
     private let compositePipelineState: MTLRenderPipelineState
     private let glitterPipelineState: MTLRenderPipelineState
-    private var offlineRenderDescriptor: MTLRenderPassDescriptor?
+    private var _glitterOneRenderPassDescriptor: MTLRenderPassDescriptor?
+    private var _glitterTwoRenderPassDescriptor: MTLRenderPassDescriptor?
+    private var computeCompositePipelineState: MTLComputePipelineState
     private let fullScreenColorVertices: MTLBuffer
     private let fullScreenTexturedVertices: MTLBuffer
     private let commandQueue: MTLCommandQueue
@@ -44,11 +46,13 @@ public class GlitterView: MTKView {
             let device = MTLCreateSystemDefaultDevice(),
             let pipelineState = Pipeline.buildComposite(device: device, pixelFormat: Self.pixelFormat),
             let glitterPipelineState = Pipeline.build(device: device, pixelFormat: Self.pixelFormat),
+            let compositePipelineState = Pipeline.buildComputeComposite(device: device, pixelFormat: Self.pixelFormat),
             let commandQueue = device.makeCommandQueue()
             else { return nil }
 
         self.compositePipelineState = pipelineState
         self.glitterPipelineState = glitterPipelineState
+        self.computeCompositePipelineState = compositePipelineState
         self.commandQueue = commandQueue
         self.config = config
 
@@ -150,7 +154,7 @@ public class GlitterView: MTKView {
         // We use this to find out when the frame changed. For some reason, overriding bounds doesn't get the didSet notification
         super.layoutSubviews()
         displayOnNextFrame = true
-        offlineRenderDescriptor = nil
+        _glitterOneRenderPassDescriptor = nil
     }
 
     public override func draw(_ rect: CGRect) {
@@ -158,55 +162,100 @@ public class GlitterView: MTKView {
             guard
                 let screenRenderPassDescriptor = currentRenderPassDescriptor,
                 let screenCommandBuffer = commandQueue.makeCommandBuffer(),
-                let offscreenCommandBuffer = commandQueue.makeCommandBuffer(),
+                let glitterOneCommandBuffer = commandQueue.makeCommandBuffer(),
+                let glitterTwoCommandBuffer = commandQueue.makeCommandBuffer(),
                 let blurCommandBuffer = commandQueue.makeCommandBuffer(),
+                let computeCommandBuffer = commandQueue.makeCommandBuffer(),
                 let drawable = currentDrawable
             else { return }
 
             // offline descriptor
             guard
-                let offlineRenderDescriptor = offlineBlurRenderPassDescriptor,
-                let offlineRenderEncoder = offscreenCommandBuffer.makeRenderCommandEncoder(descriptor: offlineRenderDescriptor)
+                let glitterOneDescriptor = glitterOneRenderPassDescriptor(),
+                let glitterOneEncoder = glitterOneCommandBuffer.makeRenderCommandEncoder(descriptor: glitterOneDescriptor),
+                let glitterTwoDescriptor = glitterTwoRenderPassDescriptor(),
+                let glitterTwoEncoder = glitterTwoCommandBuffer.makeRenderCommandEncoder(descriptor: glitterTwoDescriptor)
             else { return }
 
             // we first want to draw the glitter offline
             // TODO: here, set a flag (with the uniforms) to only draw cells that are bright. Otherwise, glitter_fragment should return alpha 0
-            offlineRenderEncoder.setRenderPipelineState(self.glitterPipelineState)
-            drawGlitter(encoder: offlineRenderEncoder)
+            glitterOneEncoder.setRenderPipelineState(self.glitterPipelineState)
+            drawGlitter(encoder: glitterOneEncoder)
 
-            offlineRenderEncoder.endEncoding()
-            offscreenCommandBuffer.commit()
+            glitterTwoEncoder.setRenderPipelineState(self.glitterPipelineState)
+            drawGlitter(encoder: glitterTwoEncoder)
+
+            glitterOneEncoder.endEncoding()
+            glitterOneCommandBuffer.commit()
+
+            glitterTwoEncoder.endEncoding()
+            glitterTwoCommandBuffer.commit()
 
             let width: Int = 5
             let tentKernel = MPSImageTent(device: self.device!, kernelWidth: width, kernelHeight: width)
-            var texture = offlineRenderDescriptor.colorAttachments[0]!.texture!
+            var texture = glitterTwoDescriptor.colorAttachments[0]!.texture!
             tentKernel.encode(commandBuffer: blurCommandBuffer, inPlaceTexture: &texture, fallbackCopyAllocator: nil)
             blurCommandBuffer.commit()
 
-            guard let screenRenderEncoder = screenCommandBuffer.makeRenderCommandEncoder(descriptor: screenRenderPassDescriptor) else {
+            let textureUnblurred = glitterOneDescriptor.colorAttachments[0].texture
+            /// TODO: composite them using the composite pipeline
+
+            guard let computeEncoder = computeCommandBuffer.makeComputeCommandEncoder() else {
                 return
             }
 
-            screenRenderEncoder.setRenderPipelineState(compositePipelineState)
-            var fragmentUniform = TextureFragmentUniform(
-                red: 0,
-                green: 0,
-                blue: 0,
-                alpha: 0.9)
-            screenRenderEncoder.setFragmentBytes(&fragmentUniform,
-                                           length: MemoryLayout.size(ofValue: fragmentUniform),
-                                           index: 0)
+            computeEncoder.setComputePipelineState(computeCompositePipelineState)
+            // input one -- primary texture
+            computeEncoder.setTexture(texture, index: 0)
+            // input two -- secondary texture
+            computeEncoder.setTexture(textureUnblurred, index: 1)
+            // output texture
+            computeEncoder.setTexture(drawable.texture, index: 2)
 
-            screenRenderEncoder.setFragmentTexture(texture, index: 0)
-            
-            screenRenderEncoder.setVertexBuffer(fullScreenTexturedVertices, offset: 0, index: 0)
-            screenRenderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+            let viewWidth = Int(bounds.size.width) * Int(UIScreen.main.scale)
+            let viewHeight = Int(bounds.size.height) * Int(UIScreen.main.scale)
 
+            // set up an 8x8 group of threads
+            let threadGroupSize = MTLSize(width: 8, height: 8, depth: 1)
 
-            screenRenderEncoder.endEncoding()
+            // define the number of such groups needed to process the textures
+            let numGroups = MTLSize(
+                width: viewWidth/threadGroupSize.width+1,
+                height: viewHeight/threadGroupSize.height+1,
+                depth: 1)
 
-            screenCommandBuffer.present(drawable)
-            screenCommandBuffer.commit()
+            computeEncoder.dispatchThreadgroups(numGroups,
+                                         threadsPerThreadgroup: threadGroupSize)
+
+            computeEncoder.endEncoding()
+
+            computeCommandBuffer.present(drawable)
+            computeCommandBuffer.commit()
+
+//            guard let screenRenderEncoder = screenCommandBuffer.makeRenderCommandEncoder(descriptor: screenRenderPassDescriptor) else {
+//                return
+//            }
+//
+//            screenRenderEncoder.setRenderPipelineState(compositePipelineState)
+//            var fragmentUniform = TextureFragmentUniform(
+//                red: 0,
+//                green: 0,
+//                blue: 0,
+//                alpha: 0.9)
+//            screenRenderEncoder.setFragmentBytes(&fragmentUniform,
+//                                           length: MemoryLayout.size(ofValue: fragmentUniform),
+//                                           index: 0)
+//
+//            screenRenderEncoder.setFragmentTexture(texture, index: 0)
+//
+//            screenRenderEncoder.setVertexBuffer(fullScreenTexturedVertices, offset: 0, index: 0)
+//            screenRenderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+//
+//
+//            screenRenderEncoder.endEncoding()
+
+//            screenCommandBuffer.present(drawable)
+//            screenCommandBuffer.commit()
         }
     }
 
@@ -269,10 +318,27 @@ public class GlitterView: MTKView {
 }
 
 extension GlitterView {
-    private var offlineBlurRenderPassDescriptor: MTLRenderPassDescriptor? {
-        if let cached = offlineRenderDescriptor {
+    private func glitterOneRenderPassDescriptor() -> MTLRenderPassDescriptor? {
+        if let cached = _glitterOneRenderPassDescriptor {
             return cached
         }
+
+        let renderPassDescriptor = glitterDescriptor()
+        self._glitterOneRenderPassDescriptor = renderPassDescriptor
+        return renderPassDescriptor
+    }
+
+    private func glitterTwoRenderPassDescriptor() -> MTLRenderPassDescriptor? {
+        if let cached = _glitterTwoRenderPassDescriptor {
+            return cached
+        }
+
+        let renderPassDescriptor = glitterDescriptor()
+        self._glitterTwoRenderPassDescriptor = renderPassDescriptor
+        return renderPassDescriptor
+    }
+
+    private func glitterDescriptor() -> MTLRenderPassDescriptor? {
         guard
             let screenPassDescriptor = currentRenderPassDescriptor,
             let screenTexture = screenPassDescriptor.colorAttachments[0].texture else {
@@ -282,7 +348,6 @@ extension GlitterView {
         textureDescriptor.width = screenTexture.width
         textureDescriptor.height = screenTexture.height
         textureDescriptor.pixelFormat = screenTexture.pixelFormat
-        // TODO: what should the usage be?
         textureDescriptor.usage = [.renderTarget, .shaderRead, .shaderWrite]
         let texture = device?.makeTexture(descriptor: textureDescriptor)
 
@@ -290,8 +355,6 @@ extension GlitterView {
         renderPassDescriptor.colorAttachments[0].texture = texture
         renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 1)
         renderPassDescriptor.colorAttachments[0].loadAction = .clear
-        self.offlineRenderDescriptor = renderPassDescriptor
-
         return renderPassDescriptor
     }
 }

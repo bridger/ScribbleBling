@@ -10,6 +10,16 @@ import Foundation
 import Metal
 
 final class Pipeline {
+    static func buildComputeComposite(device: MTLDevice, pixelFormat: MTLPixelFormat) -> MTLComputePipelineState? {
+        guard
+            let library = try? device.makeDefaultLibrary(bundle: Bundle(for: Pipeline.self)),
+            let computeFunction = library.makeFunction(name: "computeShader"),
+            let pipeline = try? device.makeComputePipelineState(function: computeFunction)
+            else { return nil }
+        
+        return pipeline
+    }
+
     static func buildComposite(device: MTLDevice, pixelFormat: MTLPixelFormat) -> MTLRenderPipelineState? {
         guard
             let library = try? device.makeDefaultLibrary(bundle: Bundle(for: Pipeline.self)),

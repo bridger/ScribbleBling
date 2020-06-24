@@ -92,19 +92,18 @@ vertex ColorVertex final_vertex(const device InColorVertex *vertices [[buffer(0)
 }
 
 fragment float4 final_fragment(ColorVertex inVertex [[stage_in]]) {
-//                                 constant PassthroughUniform &params [[buffer(1)]]) {
     return float4(inVertex.color);
 }
 
 kernel void computeShader(
-                          texture2d<float, access::read> source [[ texture(0) ]],
-//                          texture2d<float, access::read> mask [[ texture(1) ]],
-                          texture2d<float, access::write> dest [[ texture(1) ]],
-                          uint2 gid [[ thread_position_in_grid ]])
-{
-    float4 source_color = source.read(gid);
-//    float4 mask_color = mask.read(gid);
-//    float4 result_color = source_color + mask_color;
+          texture2d<float, access::read> texture1 [[ texture(0) ]],
+          texture2d<float, access::read> texture2 [[ texture(1) ]],
+          texture2d<float, access::write> dest [[ texture(2) ]],
+          uint2 gid [[ thread_position_in_grid ]]
+  ) {
+    float4 source_color = texture1.read(gid);
+    float4 mask_color = texture2.read(gid);
+    float4 result_color = min(source_color, mask_color);
 
-    dest.write(source_color, gid);
+    dest.write(result_color, gid);
 }
