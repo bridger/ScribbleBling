@@ -292,8 +292,7 @@ extension GlitterView {
         blurTextureDescriptor.usage = [.renderTarget, .shaderRead, .shaderWrite]
 
         renderPassDescriptor.colorAttachments[1].texture = device?.makeTexture(descriptor: blurTextureDescriptor)
-        renderPassDescriptor.colorAttachments[1].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
-        renderPassDescriptor.colorAttachments[1].loadAction = .clear
+        renderPassDescriptor.colorAttachments[1].loadAction = .dontCare
 
         return renderPassDescriptor
     }
