@@ -56,12 +56,14 @@ fragment float4 blur_composite_fragment(TexturedVertex inVertex [[stage_in]],
     {
         for (int i = -radius; i <= radius; ++i)
         {
-            float2 readOffset = float2(i, j) * pixelSize;
-            float2 readIndex = inVertex.texCoords + readOffset;
-            float4 color = texture.sample(textureSampler, readIndex);
-
             float weight = (1.0 - abs(i * dropoff)) * (1.0 - abs(j * dropoff));
-            accumColor = max(accumColor, color * weight);
+            if (weight > 0.05) { // No need to sample if it isn't going to be visible
+                float2 readOffset = float2(i, j) * pixelSize;
+                float2 readIndex = inVertex.texCoords + readOffset;
+                float4 color = texture.sample(textureSampler, readIndex);
+
+                accumColor = max(accumColor, color * weight);
+            }
         }
     }
 
