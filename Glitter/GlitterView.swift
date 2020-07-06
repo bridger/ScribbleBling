@@ -160,15 +160,14 @@ public class GlitterView: MTKView {
         autoreleasepool {
             guard
                 let screenRenderPassDescriptor = currentRenderPassDescriptor,
-                let screenCommandBuffer = commandQueue.makeCommandBuffer(),
-                let glitterCommandBuffer = commandQueue.makeCommandBuffer(),
+                let commandBuffer = commandQueue.makeCommandBuffer(),
                 let drawable = currentDrawable
             else { return }
 
             // offline descriptor
             guard
                 let glitterDescriptor = glitterRenderPassDescriptor(),
-                let glitterEncoder = glitterCommandBuffer.makeRenderCommandEncoder(descriptor: glitterDescriptor)
+                let glitterEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: glitterDescriptor)
             else { return }
 
             // we first want to draw the glitter offline
@@ -176,15 +175,14 @@ public class GlitterView: MTKView {
             drawGlitter(encoder: glitterEncoder)
 
             glitterEncoder.endEncoding()
-            glitterCommandBuffer.commit()
 
             screenRenderPassDescriptor.colorAttachments[0].loadAction = .load // Don't clear
-            guard let screenRenderEncoder = screenCommandBuffer.makeRenderCommandEncoder(descriptor: screenRenderPassDescriptor) else {
+            guard let screenRenderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: screenRenderPassDescriptor) else {
                 return
             }
 
             screenRenderEncoder.setRenderPipelineState(compositePipelineState)
-            var fragmentUniform = BlurCompositeFragmentUniform(radius: 4)
+            var fragmentUniform = BlurCompositeFragmentUniform(radius: 8)
             screenRenderEncoder.setFragmentBytes(&fragmentUniform,
                                            length: MemoryLayout.size(ofValue: fragmentUniform),
                                            index: 0)
@@ -197,8 +195,8 @@ public class GlitterView: MTKView {
 
             screenRenderEncoder.endEncoding()
 
-            screenCommandBuffer.present(drawable)
-            screenCommandBuffer.commit()
+            commandBuffer.present(drawable)
+            commandBuffer.commit()
         }
     }
 
