@@ -154,6 +154,10 @@ fragment FragmentOut glitter_fragment(ColorVertex inVertex [[stage_in]],
     float lightIncidence2 = abs(dot(normal2, float3(params.tilt))); // Because of the abs this will reflect in the negative direction too, so each glitter lights up more
 
     float brightness = pow(max(lightIncidence1, lightIncidence2), 30) * 2.0;
+    float brightestCell = lightIncidence1 > lightIncidence2 ? glitterCell1 : glitterCell2;
+
+    // This adds a little randomness to ever cell so none look "blank"
+    brightness = max(brightness, glitterCell1 * params.backgroundLight);
 
     float hues[] = {
         0.83, 0.74, 0.59, 0.66, 0.42, 0.14, 0.93, 0.36, 0.03, 0.19
@@ -161,7 +165,7 @@ fragment FragmentOut glitter_fragment(ColorVertex inVertex [[stage_in]],
 
     float value = brightness / 2.0;
     float saturation = max((brightness - 1.0), 0.0);
-    int hueIndex = int(random(glitterRandom1) * 10.0);
+    int hueIndex = int(rand(brightestCell) * 10.0);
     float hue = hues[hueIndex];
     float3 hsvCol = {hue, saturation, value};
 
