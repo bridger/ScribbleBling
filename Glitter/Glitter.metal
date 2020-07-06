@@ -116,7 +116,12 @@ vertex ColorVertex glitter_vertex(const device InColorVertex *vertices [[buffer(
     return vertexOut;
 }
 
-fragment float4 glitter_fragment(ColorVertex inVertex [[stage_in]],
+struct FragmentOut {
+  float4 color0 [[ color(0) ]];
+  float4 color1 [[ color(1) ]];
+};
+
+fragment FragmentOut glitter_fragment(ColorVertex inVertex [[stage_in]],
                                  constant GlitterFragmentUniform &params [[buffer(1)]]) {
 #define UPRIGHT 1.5 // upright-ness of glitter particles. Higher means they are more aligned and go off at the same time when direct on
 #define VARIANCE 4.0 // variance of glitter in x-y. Make it smaller to make the max-tilt relatively less bright compared to straight-on
@@ -167,5 +172,10 @@ fragment float4 glitter_fragment(ColorVertex inVertex [[stage_in]],
         rgbCol = rgbCol * (maxP3 - minP3) + minP3;
     }
 
-    return  float4(rgbCol, 1.0);
+    FragmentOut out;
+    float4 rgbaCol = float4(rgbCol, 1.0);
+    out.color0 = rgbaCol;
+    out.color1 = brightness > 1.2 ? rgbaCol : 0.0;
+
+    return out;
 }

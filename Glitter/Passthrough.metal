@@ -103,7 +103,7 @@ kernel void computeShader(
   ) {
     float4 source_color = texture1.read(gid);
     float4 mask_color = texture2.read(gid);
-    float4 result_color = min(source_color, mask_color);
+    float4 result_color = source_color + mask_color;
 
     dest.write(result_color, gid);
 }

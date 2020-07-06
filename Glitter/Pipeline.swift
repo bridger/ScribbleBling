@@ -67,11 +67,8 @@ final class Pipeline {
         descriptor.sampleCount = 1
         descriptor.stencilAttachmentPixelFormat = .invalid
 
-        guard let colorAttachmentDescriptor = descriptor.colorAttachments[0] else  {
-            return nil
-        }
-
-        colorAttachmentDescriptor.pixelFormat = pixelFormat
+        descriptor.colorAttachments[0]?.pixelFormat = pixelFormat
+        descriptor.colorAttachments[1]?.pixelFormat = pixelFormat
 
         return try? device.makeRenderPipelineState(descriptor: descriptor)
     }
