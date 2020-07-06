@@ -24,12 +24,12 @@ final class Pipeline {
         guard
             let library = try? device.makeDefaultLibrary(bundle: Bundle(for: Pipeline.self)),
             let textureVertexProgram = library.makeFunction(name: "textured_vertex"),
-            let shadowTextureFragment = library.makeFunction(name: "shadow_texture_fragment")
+            let blurCompositeFragment = library.makeFunction(name: "blur_composite_fragment")
             else { return nil }
 
         let descriptor = MTLRenderPipelineDescriptor()
         descriptor.vertexFunction = textureVertexProgram
-        descriptor.fragmentFunction = shadowTextureFragment
+        descriptor.fragmentFunction = blurCompositeFragment
         descriptor.sampleCount = 1
         descriptor.stencilAttachmentPixelFormat = .invalid
 
@@ -67,11 +67,8 @@ final class Pipeline {
         descriptor.sampleCount = 1
         descriptor.stencilAttachmentPixelFormat = .invalid
 
-        guard let colorAttachmentDescriptor = descriptor.colorAttachments[0] else  {
-            return nil
-        }
-
-        colorAttachmentDescriptor.pixelFormat = pixelFormat
+        descriptor.colorAttachments[0]?.pixelFormat = pixelFormat
+        descriptor.colorAttachments[1]?.pixelFormat = pixelFormat
 
         return try? device.makeRenderPipelineState(descriptor: descriptor)
     }
