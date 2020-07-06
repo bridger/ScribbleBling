@@ -13,41 +13,59 @@ import CoreMotion
 import MetalKit
 import MetalPerformanceShaders
 
-
 @available(iOS 10.0, *)
 public class GlitterView: MTKView {
-    private let pipelineState: MTLRenderPipelineState
+    private let compositePipelineState: MTLRenderPipelineState
+    private let glitterPipelineState: MTLRenderPipelineState
+    private var _glitterOneRenderPassDescriptor: MTLRenderPassDescriptor?
+    private var _glitterTwoRenderPassDescriptor: MTLRenderPassDescriptor?
+    private var computeCompositePipelineState: MTLComputePipelineState
     private let fullScreenColorVertices: MTLBuffer
+    private let fullScreenTexturedVertices: MTLBuffer
     private let commandQueue: MTLCommandQueue
 
     public var config: GlitterConfig
+
+    var fullscreenTextVertices: [TextureFloatPoint] = [
+        TextureFloatPoint(x: -1, y: -1, texX: 0, texY: 1),
+        TextureFloatPoint(x: 1, y: -1, texX: 1, texY: 1),
+        TextureFloatPoint(x: -1, y: 1, texX: 0, texY: 0),
+        TextureFloatPoint(x: 1, y: 1, texX: 1, texY: 0)
+    ]
 
     static var pixelFormat: MTLPixelFormat{
         #if targetEnvironment(simulator)
         return .bgra8Unorm
         #else
-        return (UIScreen.main.traitCollection.displayGamut == .P3) ? .bgr10_xr : .bgra8Unorm
+        return (UIScreen.main.traitCollection.displayGamut == .P3) ? .bgra10_xr : .bgra8Unorm
         #endif
     }
 
     public required init?(config: GlitterConfig) {
         guard
             let device = MTLCreateSystemDefaultDevice(),
-            let pipelineState = Pipeline.build(device: device, pixelFormat: Self.pixelFormat),
+            let pipelineState = Pipeline.buildComposite(device: device, pixelFormat: Self.pixelFormat),
+            let glitterPipelineState = Pipeline.build(device: device, pixelFormat: Self.pixelFormat),
+            let compositePipelineState = Pipeline.buildComputeComposite(device: device, pixelFormat: Self.pixelFormat),
             let commandQueue = device.makeCommandQueue()
             else { return nil }
 
-        self.pipelineState = pipelineState
+        self.compositePipelineState = pipelineState
+        self.glitterPipelineState = glitterPipelineState
+        self.computeCompositePipelineState = compositePipelineState
         self.commandQueue = commandQueue
         self.config = config
 
         let fullScreenColorVertices = config.fullScreenColorVertices.vertices
         let dataSize = fullScreenColorVertices.count * MemoryLayout.size(ofValue: fullScreenColorVertices[0])
 
-        guard let buffer = device.makeBuffer(bytes: fullScreenColorVertices, length: dataSize, options: []) else {
+        guard let verticesBuffer = device.makeBuffer(bytes: fullScreenColorVertices, length: dataSize, options: []) else {
             return nil
         }
-        self.fullScreenColorVertices = buffer
+        self.fullScreenColorVertices = verticesBuffer
+
+        let textureDataSize = fullscreenTextVertices.count * MemoryLayout.size(ofValue: fullscreenTextVertices[0])
+        self.fullScreenTexturedVertices = device.makeBuffer(bytes: fullscreenTextVertices, length: textureDataSize, options: [])!
 
         super.init(frame: CGRect.zero, device: device)
 
@@ -66,6 +84,7 @@ public class GlitterView: MTKView {
         self.layer.isOpaque = true
         self.colorPixelFormat = Self.pixelFormat
         self.sampleCount = 1
+        self.framebufferOnly = false
     }
 
     private var displayOnNextFrame = true
@@ -135,87 +154,207 @@ public class GlitterView: MTKView {
         // We use this to find out when the frame changed. For some reason, overriding bounds doesn't get the didSet notification
         super.layoutSubviews()
         displayOnNextFrame = true
+        _glitterOneRenderPassDescriptor = nil
     }
 
     public override func draw(_ rect: CGRect) {
         autoreleasepool {
             guard
-                let renderPassDescriptor = self.currentRenderPassDescriptor,
-                let commandBuffer = commandQueue.makeCommandBuffer(),
-                let drawable = self.currentDrawable
-                else {
-                    return
-            }
-            renderPassDescriptor.colorAttachments[0].loadAction = .clear
-            renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0.3, green: 0.9, blue: 0.6, alpha: 1)
+                let screenRenderPassDescriptor = currentRenderPassDescriptor,
+                let screenCommandBuffer = commandQueue.makeCommandBuffer(),
+                let glitterOneCommandBuffer = commandQueue.makeCommandBuffer(),
+                let glitterTwoCommandBuffer = commandQueue.makeCommandBuffer(),
+                let blurCommandBuffer = commandQueue.makeCommandBuffer(),
+                let computeCommandBuffer = commandQueue.makeCommandBuffer(),
+                let drawable = currentDrawable
+            else { return }
 
+            // offline descriptor
             guard
-                let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)
-                else {
-                    return
+                let glitterOneDescriptor = glitterOneRenderPassDescriptor(),
+                let glitterOneEncoder = glitterOneCommandBuffer.makeRenderCommandEncoder(descriptor: glitterOneDescriptor),
+                let glitterTwoDescriptor = glitterTwoRenderPassDescriptor(),
+                let glitterTwoEncoder = glitterTwoCommandBuffer.makeRenderCommandEncoder(descriptor: glitterTwoDescriptor)
+            else { return }
+
+            // we first want to draw the glitter offline
+            // TODO: here, set a flag (with the uniforms) to only draw cells that are bright. Otherwise, glitter_fragment should return alpha 0
+            glitterOneEncoder.setRenderPipelineState(self.glitterPipelineState)
+            drawGlitter(encoder: glitterOneEncoder)
+
+            glitterTwoEncoder.setRenderPipelineState(self.glitterPipelineState)
+            drawGlitter(encoder: glitterTwoEncoder)
+
+            glitterOneEncoder.endEncoding()
+            glitterOneCommandBuffer.commit()
+
+            glitterTwoEncoder.endEncoding()
+            glitterTwoCommandBuffer.commit()
+
+            let width: Int = 5
+            let tentKernel = MPSImageTent(device: self.device!, kernelWidth: width, kernelHeight: width)
+            var texture = glitterTwoDescriptor.colorAttachments[0]!.texture!
+            tentKernel.encode(commandBuffer: blurCommandBuffer, inPlaceTexture: &texture, fallbackCopyAllocator: nil)
+            blurCommandBuffer.commit()
+
+            let textureUnblurred = glitterOneDescriptor.colorAttachments[0].texture
+            /// TODO: composite them using the composite pipeline
+
+            guard let computeEncoder = computeCommandBuffer.makeComputeCommandEncoder() else {
+                return
             }
 
-            renderEncoder.setRenderPipelineState(self.pipelineState)
+            computeEncoder.setComputePipelineState(computeCompositePipelineState)
+            // input one -- primary texture
+            computeEncoder.setTexture(texture, index: 0)
+            // input two -- secondary texture
+            computeEncoder.setTexture(textureUnblurred, index: 1)
+            // output texture
+            computeEncoder.setTexture(drawable.texture, index: 2)
 
-            var xTilt: Double
-            var yTilt: Double
-            let zTilt: Double = 0.15 // Lower this to make the tilt have more of an effect
-            if let tilt = motionTilt {
-                xTilt = Double(tilt.horizontal)
-                yTilt = Double(tilt.vertical)
+            let viewWidth = Int(bounds.size.width) * Int(UIScreen.main.scale)
+            let viewHeight = Int(bounds.size.height) * Int(UIScreen.main.scale)
 
-                if let gravity = self.gravity {
-                    let gravityEffect: Double = 0.3
-                    // This just incorporates gravity into a small effect so that we get some shimmer even when UIMotionEffect is maxed out
-                    xTilt += sin(gravity.x + gravity.z / 2.0) * gravityEffect
-                    yTilt += sin(gravity.y + gravity.z / 2.0) * gravityEffect
-                }
-            } else {
-                xTilt = (sin(startTime.timeIntervalSinceNow * 0.9) + 1.0) / 2.0
-                yTilt = (cos(startTime.timeIntervalSinceNow * 0.8) + 1.0) / 2.0
-            }
+            // set up an 8x8 group of threads
+            let threadGroupSize = MTLSize(width: 8, height: 8, depth: 1)
 
-            if let shimmerAnimation = shimmerAnimation {
-                shimmerAnimation.currentTime = CACurrentMediaTime()
-                let amount = ImpulsePulse().apply(shimmerAnimation.percent) * config.shimmerStrength
-                xTilt += Double(sin(shimmerAnimation.currentValue) * amount)
-                yTilt += Double(cos(shimmerAnimation.currentValue) * amount * 0.5)
-            }
+            // define the number of such groups needed to process the textures
+            let numGroups = MTLSize(
+                width: viewWidth/threadGroupSize.width+1,
+                height: viewHeight/threadGroupSize.height+1,
+                depth: 1)
 
-            // Normalize the tilt
-            let tiltLength = sqrt(
-                xTilt * xTilt +
-                    yTilt * yTilt +
-                    zTilt * zTilt)
+            computeEncoder.dispatchThreadgroups(numGroups,
+                                         threadsPerThreadgroup: threadGroupSize)
 
-            var fragmentUniform = GlitterFragmentUniforms(
-                displayWidth: Float(self.bounds.width * self.contentScaleFactor),
-                displayHeight: Float(self.bounds.height * self.contentScaleFactor),
-                displayScale: Float(self.contentScaleFactor),
-                tiltX: Float(xTilt / tiltLength),
-                tiltY: Float(yTilt / tiltLength),
-                tiltZ: Float(zTilt / tiltLength),
-                cellSize: Float(10.0 - config.glitterSize) / 10.0,
-                whiteness: Float(config.glitterWhiteness),
-                darkness: Float(config.glitterDarkness),
-                backgroundLight: Float(config.glitterBackgroundVariance),
-                hueVariance: Float(config.glitterHueVariance) / 10,
-                useWideColor: Self.pixelFormat == .bgra8Unorm ? 0 : 1
-            )
+            computeEncoder.endEncoding()
 
-            renderEncoder.setFragmentBytes(&fragmentUniform, length: MemoryLayout.size(ofValue: fragmentUniform), index: 1)
+            computeCommandBuffer.present(drawable)
+            computeCommandBuffer.commit()
 
-            renderEncoder.setVertexBuffer(fullScreenColorVertices, offset: 0, index: 0)
-            renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+//            guard let screenRenderEncoder = screenCommandBuffer.makeRenderCommandEncoder(descriptor: screenRenderPassDescriptor) else {
+//                return
+//            }
+//
+//            screenRenderEncoder.setRenderPipelineState(compositePipelineState)
+//            var fragmentUniform = TextureFragmentUniform(
+//                red: 0,
+//                green: 0,
+//                blue: 0,
+//                alpha: 0.9)
+//            screenRenderEncoder.setFragmentBytes(&fragmentUniform,
+//                                           length: MemoryLayout.size(ofValue: fragmentUniform),
+//                                           index: 0)
+//
+//            screenRenderEncoder.setFragmentTexture(texture, index: 0)
+//
+//            screenRenderEncoder.setVertexBuffer(fullScreenTexturedVertices, offset: 0, index: 0)
+//            screenRenderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+//
+//
+//            screenRenderEncoder.endEncoding()
 
-            renderEncoder.endEncoding()
-
-            commandBuffer.present(drawable)
-            commandBuffer.commit()
+//            screenCommandBuffer.present(drawable)
+//            screenCommandBuffer.commit()
         }
+    }
+
+    private func drawGlitter(encoder: MTLRenderCommandEncoder) {
+        var xTilt: Double
+        var yTilt: Double
+        let zTilt: Double = 0.15 // Lower this to make the tilt have more of an effect
+        if let tilt = motionTilt {
+            xTilt = Double(tilt.horizontal)
+            yTilt = Double(tilt.vertical)
+
+            if let gravity = self.gravity {
+                let gravityEffect: Double = 0.3
+                // This just incorporates gravity into a small effect so that we get some shimmer even when UIMotionEffect is maxed out
+                xTilt += sin(gravity.x + gravity.z / 2.0) * gravityEffect
+                yTilt += sin(gravity.y + gravity.z / 2.0) * gravityEffect
+            }
+        } else {
+            xTilt = (sin(startTime.timeIntervalSinceNow * 0.9) + 1.0) / 2.0
+            yTilt = (cos(startTime.timeIntervalSinceNow * 0.8) + 1.0) / 2.0
+        }
+
+        if let shimmerAnimation = shimmerAnimation {
+            shimmerAnimation.currentTime = CACurrentMediaTime()
+            let amount = ImpulsePulse().apply(shimmerAnimation.percent) * config.shimmerStrength
+            xTilt += Double(sin(shimmerAnimation.currentValue) * amount)
+            yTilt += Double(cos(shimmerAnimation.currentValue) * amount * 0.5)
+        }
+
+        // Normalize the tilt
+        let tiltLength = sqrt(
+            xTilt * xTilt +
+                yTilt * yTilt +
+                zTilt * zTilt)
+
+        var fragmentUniform = GlitterFragmentUniforms(
+            displayWidth: Float(self.bounds.width * self.contentScaleFactor),
+            displayHeight: Float(self.bounds.height * self.contentScaleFactor),
+            displayScale: Float(self.contentScaleFactor),
+            tiltX: Float(xTilt / tiltLength),
+            tiltY: Float(yTilt / tiltLength),
+            tiltZ: Float(zTilt / tiltLength),
+            cellSize: Float(10.0 - config.glitterSize) / 10.0,
+            whiteness: Float(config.glitterWhiteness),
+            darkness: Float(config.glitterDarkness),
+            backgroundLight: Float(config.glitterBackgroundVariance),
+            hueVariance: Float(config.glitterHueVariance) / 10,
+            useWideColor: Self.pixelFormat == .bgra8Unorm ? 0 : 1
+        )
+
+        encoder.setFragmentBytes(&fragmentUniform, length: MemoryLayout.size(ofValue: fragmentUniform), index: 1)
+
+        encoder.setVertexBuffer(fullScreenColorVertices, offset: 0, index: 0)
+        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
     }
 
     required init(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+}
+
+extension GlitterView {
+    private func glitterOneRenderPassDescriptor() -> MTLRenderPassDescriptor? {
+        if let cached = _glitterOneRenderPassDescriptor {
+            return cached
+        }
+
+        let renderPassDescriptor = glitterDescriptor()
+        self._glitterOneRenderPassDescriptor = renderPassDescriptor
+        return renderPassDescriptor
+    }
+
+    private func glitterTwoRenderPassDescriptor() -> MTLRenderPassDescriptor? {
+        if let cached = _glitterTwoRenderPassDescriptor {
+            return cached
+        }
+
+        let renderPassDescriptor = glitterDescriptor()
+        self._glitterTwoRenderPassDescriptor = renderPassDescriptor
+        return renderPassDescriptor
+    }
+
+    private func glitterDescriptor() -> MTLRenderPassDescriptor? {
+        guard
+            let screenPassDescriptor = currentRenderPassDescriptor,
+            let screenTexture = screenPassDescriptor.colorAttachments[0].texture else {
+            return nil
+        }
+        let textureDescriptor = MTLTextureDescriptor()
+        textureDescriptor.width = screenTexture.width
+        textureDescriptor.height = screenTexture.height
+        textureDescriptor.pixelFormat = screenTexture.pixelFormat
+        textureDescriptor.usage = [.renderTarget, .shaderRead, .shaderWrite]
+        let texture = device?.makeTexture(descriptor: textureDescriptor)
+
+        let renderPassDescriptor = MTLRenderPassDescriptor()
+        renderPassDescriptor.colorAttachments[0].texture = texture
+        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 1)
+        renderPassDescriptor.colorAttachments[0].loadAction = .clear
+        return renderPassDescriptor
     }
 }

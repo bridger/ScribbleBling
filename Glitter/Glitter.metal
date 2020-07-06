@@ -162,11 +162,9 @@ fragment float4 glitter_fragment(ColorVertex inVertex [[stage_in]],
 
     float3 rgbCol = hsv2rgb(hsvCol);
     if (params.useWideColor) {
-        const float3x3 linearP3ToLinearSRGBMatrix =
-        float3x3(float3(1.2249,  -0.2247,  0.0),
-                 float3(-0.0420,   1.0419,  0.0),
-                 float3(-0.0197,  -0.0786,  1.0979));
-        rgbCol = linearP3ToLinearSRGBMatrix * rgbCol;
+        const float minP3 = -0.752941;
+        const float maxP3 = 1.25098;
+        rgbCol = rgbCol * (maxP3 - minP3) + minP3;
     }
 
     return  float4(rgbCol, 1.0);
