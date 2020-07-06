@@ -162,7 +162,6 @@ public class GlitterView: MTKView {
                 let screenRenderPassDescriptor = currentRenderPassDescriptor,
                 let screenCommandBuffer = commandQueue.makeCommandBuffer(),
                 let glitterCommandBuffer = commandQueue.makeCommandBuffer(),
-                let blurCommandBuffer = commandQueue.makeCommandBuffer(),
                 let drawable = currentDrawable
             else { return }
 
@@ -179,27 +178,18 @@ public class GlitterView: MTKView {
             glitterEncoder.endEncoding()
             glitterCommandBuffer.commit()
 
-            let width: Int = 17
-            let tentKernel = MPSImageTent(device: self.device!, kernelWidth: width, kernelHeight: width)
-            var blurTexture = glitterDescriptor.colorAttachments[1]!.texture!
-            tentKernel.encode(commandBuffer: blurCommandBuffer, inPlaceTexture: &blurTexture, fallbackCopyAllocator: nil)
-            blurCommandBuffer.commit()
-
             screenRenderPassDescriptor.colorAttachments[0].loadAction = .load // Don't clear
             guard let screenRenderEncoder = screenCommandBuffer.makeRenderCommandEncoder(descriptor: screenRenderPassDescriptor) else {
                 return
             }
 
             screenRenderEncoder.setRenderPipelineState(compositePipelineState)
-            var fragmentUniform = TextureFragmentUniform(
-                red: 0,
-                green: 0,
-                blue: 0,
-                alpha: 0.9)
+            var fragmentUniform = BlurCompositeFragmentUniform(radius: 4)
             screenRenderEncoder.setFragmentBytes(&fragmentUniform,
                                            length: MemoryLayout.size(ofValue: fragmentUniform),
                                            index: 0)
 
+            let blurTexture = glitterDescriptor.colorAttachments[1]!.texture!
             screenRenderEncoder.setFragmentTexture(blurTexture, index: 0)
 
             screenRenderEncoder.setVertexBuffer(fullScreenTexturedVertices, offset: 0, index: 0)
@@ -297,6 +287,7 @@ extension GlitterView {
         blurTextureDescriptor.sampleCount = 1 // We don't multisample
         blurTextureDescriptor.textureType = .type2D
 
+        // TODO: Using a smaller texture here, like screenTexture.width / 2 could improve performance
         blurTextureDescriptor.width = screenTexture.width
         blurTextureDescriptor.height = screenTexture.height
         blurTextureDescriptor.pixelFormat = screenTexture.pixelFormat

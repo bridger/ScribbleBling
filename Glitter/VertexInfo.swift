@@ -75,9 +75,6 @@ struct TextureFloatPoint {
     public let texY: Float
 }
 
-struct TextureFragmentUniform {
-    let red: Float
-    let green: Float
-    let blue: Float
-    let alpha: Float
+struct BlurCompositeFragmentUniform {
+    let radius: Int
 }

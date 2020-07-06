@@ -23,12 +23,9 @@ struct TexturedVertex
     float2 texCoords;
 };
 
-struct TextureFragmentUniform
+struct BlurCompositeFragmentUniform
 {
-    float red;
-    float green;
-    float blue;
-    float alpha;
+    int radius;
 };
 
 
@@ -41,17 +38,34 @@ vertex TexturedVertex textured_vertex(const device InTexturedVertex *vertices [[
     return vertexOut;
 }
 
-
-fragment float4 shadow_texture_fragment(TexturedVertex inVertex [[stage_in]],
-                                        texture2d<float> texture [[ texture(0) ]],
-                                        constant TextureFragmentUniform &uniforms [[buffer(0)]]
+fragment float4 blur_composite_fragment(TexturedVertex inVertex [[stage_in]],
+                                        texture2d<float, access::sample> texture [[ texture(0) ]],
+                                        constant BlurCompositeFragmentUniform &uniforms [[buffer(0)]]
                                         )
 {
-    constexpr sampler textureSampler(mag_filter::nearest,
-                                     min_filter::nearest);
-    float4 sampled = texture.sample(textureSampler, inVertex.texCoords);
-    sampled.a *= uniforms.alpha;
-    return sampled;
+    constexpr sampler textureSampler(mag_filter::linear,
+                                     min_filter::linear);
+
+    int radius = uniforms.radius;
+    float dropoff = 1.0 / radius;
+
+    float2 pixelSize = float2(1.0 / texture.get_width(),
+                              1.0 / texture.get_height());
+    float4 accumColor(0, 0, 0, 0);
+    for (int j = -radius; j <= radius; ++j)
+    {
+        for (int i = -radius; i <= radius; ++i)
+        {
+            float2 readOffset = float2(i, j) * pixelSize;
+            float2 readIndex = inVertex.texCoords + readOffset;
+            float4 color = texture.sample(textureSampler, readIndex);
+
+            float weight = (1.0 - abs(i * dropoff)) * (1.0 - abs(j * dropoff));
+            accumColor = max(accumColor, color * weight);
+        }
+    }
+
+    return accumColor;
 }
 
 // --- Compute
