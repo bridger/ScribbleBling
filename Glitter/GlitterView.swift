@@ -18,7 +18,6 @@ public class GlitterView: MTKView {
     private let compositePipelineState: MTLRenderPipelineState
     private let glitterPipelineState: MTLRenderPipelineState
     private var _glitterRenderPassDescriptor: MTLRenderPassDescriptor?
-    private var computeCompositePipelineState: MTLComputePipelineState
     private let fullScreenColorVertices: MTLBuffer
     private let fullScreenTexturedVertices: MTLBuffer
     private let commandQueue: MTLCommandQueue
@@ -45,13 +44,11 @@ public class GlitterView: MTKView {
             let device = MTLCreateSystemDefaultDevice(),
             let pipelineState = Pipeline.buildComposite(device: device, pixelFormat: Self.pixelFormat),
             let glitterPipelineState = Pipeline.build(device: device, pixelFormat: Self.pixelFormat),
-            let compositePipelineState = Pipeline.buildComputeComposite(device: device, pixelFormat: Self.pixelFormat),
             let commandQueue = device.makeCommandQueue()
             else { return nil }
 
         self.compositePipelineState = pipelineState
         self.glitterPipelineState = glitterPipelineState
-        self.computeCompositePipelineState = compositePipelineState
         self.commandQueue = commandQueue
         self.config = config
 

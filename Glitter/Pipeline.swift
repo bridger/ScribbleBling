@@ -10,6 +10,7 @@ import Foundation
 import Metal
 
 final class Pipeline {
+    // TODO: remove this and its shader
     static func buildComputeComposite(device: MTLDevice, pixelFormat: MTLPixelFormat) -> MTLComputePipelineState? {
         guard
             let library = try? device.makeDefaultLibrary(bundle: Bundle(for: Pipeline.self)),

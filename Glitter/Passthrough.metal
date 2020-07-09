@@ -47,25 +47,31 @@ fragment float4 blur_composite_fragment(TexturedVertex inVertex [[stage_in]],
                                      min_filter::linear);
 
     int radius = uniforms.radius;
-    float dropoff = 1.0 / radius;
-
     float2 pixelSize = float2(1.0 / texture.get_width(),
                               1.0 / texture.get_height());
     float4 accumColor(0, 0, 0, 0);
+    float maxOffsetI = -radius;
+    float maxOffSetJ = -radius;
     for (int j = -radius; j <= radius; ++j)
     {
         for (int i = -radius; i <= radius; ++i)
         {
-            float weight = (1.0 - abs(i * dropoff)) * (1.0 - abs(j * dropoff));
-            if (weight > 0.05) { // No need to sample if it isn't going to be visible
-                float2 readOffset = float2(i, j) * pixelSize;
-                float2 readIndex = inVertex.texCoords + readOffset;
-                float4 color = texture.sample(textureSampler, readIndex);
+            float2 readOffset = float2(i, j) * pixelSize;
+            float2 readIndex = inVertex.texCoords + readOffset;
+            float4 color = texture.sample(textureSampler, readIndex);
+            float colorSum = color.x + color.y + color.z + color.w;
+            float accumColorSum = accumColor.x + accumColor.y + accumColor.z + accumColor.w;
 
-                accumColor = max(accumColor, color * weight);
+            if (colorSum > accumColorSum) {
+                accumColor = color;
+                maxOffsetI = i;
+                maxOffSetJ = j;
             }
         }
     }
+
+    float weight = 1 - (abs(maxOffsetI) + abs(maxOffSetJ)) / (radius * 2.0);
+    accumColor = accumColor * weight;
 
     return accumColor;
 }
@@ -99,7 +105,7 @@ struct PassthroughUniform {
 };
 
 vertex ColorVertex final_vertex(const device InColorVertex *vertices [[buffer(0)]],
-                                  uint vid [[vertex_id]])
+                                uint vid [[vertex_id]])
 {
     ColorVertex vertexOut;
     vertexOut.position = float4(vertices[vid].position, 0, 1);
@@ -112,11 +118,11 @@ fragment float4 final_fragment(ColorVertex inVertex [[stage_in]]) {
 }
 
 kernel void computeShader(
-          texture2d<float, access::read> texture1 [[ texture(0) ]],
-          texture2d<float, access::read> texture2 [[ texture(1) ]],
-          texture2d<float, access::write> dest [[ texture(2) ]],
-          uint2 gid [[ thread_position_in_grid ]]
-  ) {
+                          texture2d<float, access::read> texture1 [[ texture(0) ]],
+                          texture2d<float, access::read> texture2 [[ texture(1) ]],
+                          texture2d<float, access::write> dest [[ texture(2) ]],
+                          uint2 gid [[ thread_position_in_grid ]]
+                          ) {
     float4 source_color = texture1.read(gid);
     float4 mask_color = texture2.read(gid);
     float4 result_color = source_color + mask_color;
