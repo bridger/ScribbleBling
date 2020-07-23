@@ -10,7 +10,7 @@ import UIKit
 import Glitter
 
 class ViewController: UIViewController {
-    private var glitterView: GlitterView?
+    private var glitterView: StarfieldView?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -18,7 +18,7 @@ class ViewController: UIViewController {
     }
 
     private func setupGlitterView() {
-        guard let glitterView = GlitterView(config: .default) else {
+        guard let glitterView = StarfieldView(config: .default) else {
             assertionFailure("Unable to set up a GlitterView")
             return
         }

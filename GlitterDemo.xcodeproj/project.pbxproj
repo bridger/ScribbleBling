@@ -8,6 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		590E31582485C98D005E3A98 /* Passthrough.metal in Sources */ = {isa = PBXBuildFile; fileRef = 590E31572485C98D005E3A98 /* Passthrough.metal */; };
+		592AC25824C9375F00B9D044 /* StarField.metal in Sources */ = {isa = PBXBuildFile; fileRef = 592AC25724C9375F00B9D044 /* StarField.metal */; };
+		592AC25A24C94C5F00B9D044 /* StarfieldView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 592AC25924C94C5F00B9D044 /* StarfieldView.swift */; };
+		592AC25C24C94CDF00B9D044 /* StarfieldConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 592AC25B24C94CDF00B9D044 /* StarfieldConfig.swift */; };
+		5967596424C536D700D3CCE9 /* ShaderToyStarField.metal in Sources */ = {isa = PBXBuildFile; fileRef = 5967596324C536D700D3CCE9 /* ShaderToyStarField.metal */; };
 		59EA0D7D246E480F008FD867 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0D7C246E480F008FD867 /* AppDelegate.swift */; };
 		59EA0D7F246E480F008FD867 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0D7E246E480F008FD867 /* SceneDelegate.swift */; };
 		59EA0D81246E480F008FD867 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0D80246E480F008FD867 /* ViewController.swift */; };
@@ -21,7 +25,7 @@
 		59EA0DA9246EFFEF008FD867 /* Pipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0DA8246EFFEF008FD867 /* Pipeline.swift */; };
 		59EA0DAB246F20A5008FD867 /* Animation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0DAA246F20A5008FD867 /* Animation.swift */; };
 		59EA0DAE246F26A8008FD867 /* Glitter.metal in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0DAC246F269E008FD867 /* Glitter.metal */; };
-		59EA0DB0246F328F008FD867 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0DAF246F328F008FD867 /* Config.swift */; };
+		59EA0DB0246F328F008FD867 /* GlitterConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0DAF246F328F008FD867 /* GlitterConfig.swift */; };
 		59EA0DB2246F32D3008FD867 /* MotionEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0DB1246F32D3008FD867 /* MotionEffect.swift */; };
 		59EA0DB4246F33BC008FD867 /* VertexInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EA0DB3246F33BC008FD867 /* VertexInfo.swift */; };
 /* End PBXBuildFile section */
@@ -52,6 +56,10 @@
 
 /* Begin PBXFileReference section */
 		590E31572485C98D005E3A98 /* Passthrough.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Passthrough.metal; sourceTree = "<group>"; };
+		592AC25724C9375F00B9D044 /* StarField.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = StarField.metal; sourceTree = "<group>"; };
+		592AC25924C94C5F00B9D044 /* StarfieldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarfieldView.swift; sourceTree = "<group>"; };
+		592AC25B24C94CDF00B9D044 /* StarfieldConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarfieldConfig.swift; sourceTree = "<group>"; };
+		5967596324C536D700D3CCE9 /* ShaderToyStarField.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = ShaderToyStarField.metal; sourceTree = "<group>"; };
 		59EA0D79246E480F008FD867 /* GlitterDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GlitterDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		59EA0D7C246E480F008FD867 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		59EA0D7E246E480F008FD867 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -67,7 +75,7 @@
 		59EA0DA8246EFFEF008FD867 /* Pipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pipeline.swift; sourceTree = "<group>"; };
 		59EA0DAA246F20A5008FD867 /* Animation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Animation.swift; sourceTree = "<group>"; };
 		59EA0DAC246F269E008FD867 /* Glitter.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Glitter.metal; sourceTree = "<group>"; };
-		59EA0DAF246F328F008FD867 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		59EA0DAF246F328F008FD867 /* GlitterConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlitterConfig.swift; sourceTree = "<group>"; };
 		59EA0DB1246F32D3008FD867 /* MotionEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionEffect.swift; sourceTree = "<group>"; };
 		59EA0DB3246F33BC008FD867 /* VertexInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VertexInfo.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -128,14 +136,18 @@
 			children = (
 				59EA0D97246E4826008FD867 /* Glitter.h */,
 				59EA0D98246E4826008FD867 /* Info.plist */,
+				5967596324C536D700D3CCE9 /* ShaderToyStarField.metal */,
 				59EA0DA6246EFF63008FD867 /* GlitterView.swift */,
+				592AC25924C94C5F00B9D044 /* StarfieldView.swift */,
 				59EA0DB3246F33BC008FD867 /* VertexInfo.swift */,
 				59EA0DB1246F32D3008FD867 /* MotionEffect.swift */,
-				59EA0DAF246F328F008FD867 /* Config.swift */,
+				59EA0DAF246F328F008FD867 /* GlitterConfig.swift */,
+				592AC25B24C94CDF00B9D044 /* StarfieldConfig.swift */,
 				59EA0DAA246F20A5008FD867 /* Animation.swift */,
 				59EA0DA8246EFFEF008FD867 /* Pipeline.swift */,
 				590E31572485C98D005E3A98 /* Passthrough.metal */,
 				59EA0DAC246F269E008FD867 /* Glitter.metal */,
+				592AC25724C9375F00B9D044 /* StarField.metal */,
 			);
 			path = Glitter;
 			sourceTree = "<group>";
@@ -264,10 +276,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				592AC25824C9375F00B9D044 /* StarField.metal in Sources */,
+				5967596424C536D700D3CCE9 /* ShaderToyStarField.metal in Sources */,
 				59EA0DA7246EFF63008FD867 /* GlitterView.swift in Sources */,
 				59EA0DAE246F26A8008FD867 /* Glitter.metal in Sources */,
+				592AC25C24C94CDF00B9D044 /* StarfieldConfig.swift in Sources */,
+				592AC25A24C94C5F00B9D044 /* StarfieldView.swift in Sources */,
 				590E31582485C98D005E3A98 /* Passthrough.metal in Sources */,
-				59EA0DB0246F328F008FD867 /* Config.swift in Sources */,
+				59EA0DB0246F328F008FD867 /* GlitterConfig.swift in Sources */,
 				59EA0DAB246F20A5008FD867 /* Animation.swift in Sources */,
 				59EA0DB2246F32D3008FD867 /* MotionEffect.swift in Sources */,
 				59EA0DA9246EFFEF008FD867 /* Pipeline.swift in Sources */,

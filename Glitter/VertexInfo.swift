@@ -54,18 +54,29 @@ struct GlitterFragmentUniforms {
     let displayWidth: Float
     let displayHeight: Float
     let displayScale: Float
-
+    
     let tiltX: Float
     let tiltY: Float
     let tiltZ: Float
-
+    
     let cellSize: Float
     let whiteness: Float
     let darkness: Float
     let backgroundLight: Float
     let hueVariance: Float
-
+    
     let useWideColor: Int32
+}
+
+
+struct StarFieldFragmentUniforms {
+    let displayWidth: Float
+    let displayHeight: Float
+    let displayScale: Float
+
+    let tiltX: Float
+    let tiltY: Float
+    let tiltZ: Float
 }
 
 struct TextureFloatPoint {

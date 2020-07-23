@@ -54,8 +54,26 @@ final class Pipeline {
 
         return pipelineState
     }
+    
+    static func starField(device: MTLDevice, pixelFormat: MTLPixelFormat) -> MTLRenderPipelineState? {
+        guard
+            let library = try? device.makeDefaultLibrary(bundle: Bundle(for: Pipeline.self)),
+            let starFieldVertex = library.makeFunction(name: "starfield_vertex"),
+            let starFieldFragment = library.makeFunction(name: "starfield_fragment")
+            else { return nil }
+        
+        let descriptor = MTLRenderPipelineDescriptor()
+        descriptor.vertexFunction = starFieldVertex
+        descriptor.fragmentFunction = starFieldFragment
+        descriptor.sampleCount = 1
+        descriptor.stencilAttachmentPixelFormat = .invalid
+        
+        descriptor.colorAttachments[0]?.pixelFormat = pixelFormat
+        
+        return try? device.makeRenderPipelineState(descriptor: descriptor)
+    }    
 
-    static func build(device: MTLDevice, pixelFormat: MTLPixelFormat) -> MTLRenderPipelineState? {
+    static func glitter(device: MTLDevice, pixelFormat: MTLPixelFormat) -> MTLRenderPipelineState? {
         guard
             let library = try? device.makeDefaultLibrary(bundle: Bundle(for: Pipeline.self)),
             let glitterVertex = library.makeFunction(name: "glitter_vertex"),
